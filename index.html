@@ -1,0 +1,452 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lingo Lab – English Practice</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lingo Lab">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f6f8fc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --primary: #4f46e5;
+    --primary-light: #eef2ff;
+    --accent: #06b6d4;
+    --success: #10b981;
+    --error: #ef4444;
+    --radius: 16px;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+  }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .app {
+    width: 100%;
+    max-width: 520px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .install-bar {
+    display: none;
+    padding: 10px 18px;
+    background: var(--primary);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 600;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+  .install-bar.show { display: flex; }
+  .install-bar span { opacity: .9; }
+  .install-bar .close-btn {
+    background: none; border: none; color: #fff;
+    font-size: 1.1rem; cursor: pointer; padding: 2px 8px; opacity: .7;
+  }
+  .install-bar .close-btn:hover { opacity: 1; }
+  .header {
+    padding: 24px 24px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -.015em; }
+  .header h1 span { color: var(--accent); }
+  .streak { display: flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+  .streak-num { color: var(--primary); font-variant-numeric: tabular-nums; }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .tab {
+    flex: 1; padding: 12px 0 11px; text-align: center; font-size: .82rem; font-weight: 600;
+    color: var(--muted); background: none; border: none; cursor: pointer; position: relative; transition: color .2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--primary); }
+  .tab.active::after {
+    content: ''; position: absolute; bottom: 0; left: 20%; width: 60%;
+    height: 3px; background: var(--primary); border-radius: 3px 3px 0 0;
+  }
+  .pane { display: none; padding: 24px; }
+  .pane.active { display: block; }
+  .flashcard-wrap { perspective: 800px; margin-bottom: 20px; }
+  .flashcard {
+    position: relative; width: 100%; min-height: 220px; cursor: pointer;
+    transition: transform .5s ease; transform-style: preserve-3d;
+  }
+  .flashcard.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 32px 28px;
+    border-radius: var(--radius);
+    background: linear-gradient(145deg, #f9faff, #f0f3fe);
+    border: 1px solid var(--border); backface-visibility: hidden; min-height: 220px;
+  }
+  .card-face.back { transform: rotateY(180deg); background: var(--primary-light); }
+  .card-word { font-size: 2rem; font-weight: 700; margin-bottom: 6px; }
+  .card-phonetic { font-size: .85rem; color: var(--muted); font-style: italic; margin-bottom: 4px; }
+  .card-def { font-size: 1rem; line-height: 1.6; text-align: center; color: var(--text); max-width: 320px; }
+  .card-example {
+    margin-top: 14px; font-size: .88rem; color: var(--muted); font-style: italic;
+    text-align: center; line-height: 1.5; border-top: 1px solid var(--border);
+    padding-top: 14px; width: 100%;
+  }
+  .card-hint { position: absolute; bottom: 12px; font-size: .75rem; color: var(--muted); opacity: .6; }
+  .flashcard-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+  .flashcard-nav button {
+    background: none; border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 16px; font-size: .85rem; font-weight: 600; color: var(--muted);
+    cursor: pointer; transition: all .15s;
+  }
+  .flashcard-nav button:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+  .flashcard-nav .counter { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .btn-know { background: var(--primary) !important; border-color: var(--primary) !important; color: #fff !important; }
+  .btn-know:hover { opacity: .88 !important; background: var(--primary) !important; }
+  .quiz-progress { display: flex; gap: 4px; margin-bottom: 20px; }
+  .quiz-progress .dot { flex: 1; height: 5px; border-radius: 3px; background: var(--border); transition: background .25s; }
+  .quiz-progress .dot.correct { background: var(--success); }
+  .quiz-progress .dot.wrong { background: var(--error); }
+  .quiz-progress .dot.current { background: var(--primary); }
+  .quiz-question { font-size: 1.35rem; font-weight: 700; text-align: center; margin-bottom: 6px; }
+  .quiz-context { text-align: center; font-size: .85rem; color: var(--muted); margin-bottom: 20px; }
+  .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+  .quiz-options button {
+    padding: 14px 18px; text-align: left; font-size: .95rem; font-weight: 500;
+    border: 2px solid var(--border); border-radius: 12px; background: var(--surface);
+    cursor: pointer; transition: all .15s;
+  }
+  .quiz-options button:hover:not(.disabled) { border-color: var(--primary); background: var(--primary-light); }
+  .quiz-options button.selected { border-color: var(--primary); }
+  .quiz-options button.correct { border-color: var(--success); background: #ecfdf5; }
+  .quiz-options button.wrong { border-color: var(--error); background: #fef2f2; }
+  .quiz-options button.disabled { cursor: default; opacity: .6; }
+  .quiz-feedback { margin-top: 14px; padding: 12px 16px; border-radius: 10px; font-size: .88rem; line-height: 1.5; display: none; }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct { background: #ecfdf5; color: #065f46; }
+  .quiz-feedback.wrong { background: #fef2f2; color: #991b1b; }
+  .quiz-next { margin-top: 14px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 600; font-size: .9rem; cursor: pointer; display: none; }
+  .quiz-next.show { display: block; }
+  .quiz-next:hover { opacity: .88; }
+  .quiz-score { text-align: center; padding: 20px 0; }
+  .quiz-score .big { font-size: 2.5rem; font-weight: 800; color: var(--primary); }
+  .quiz-score .sub { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+  .quiz-score .btn-retry { margin-top: 18px; padding: 10px 28px; border: 2px solid var(--primary); border-radius: 10px; background: none; color: var(--primary); font-weight: 600; font-size: .85rem; cursor: pointer; transition: all .15s; }
+  .quiz-score .btn-retry:hover { background: var(--primary-light); }
+  .match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .match-card {
+    padding: 14px 10px; text-align: center; border-radius: 12px; border: 2px solid var(--border);
+    background: var(--surface); font-size: .9rem; font-weight: 500; cursor: pointer;
+    transition: all .15s; min-height: 56px; display: flex; align-items: center;
+    justify-content: center; word-break: break-word; user-select: none;
+  }
+  .match-card:hover:not(.matched):not(.selected) { border-color: var(--accent); }
+  .match-card.selected { border-color: var(--primary); background: var(--primary-light); }
+  .match-card.matched { border-color: var(--success); background: #ecfdf5; cursor: default; opacity: .7; }
+  .match-card.wrong-try { border-color: var(--error); background: #fef2f2; animation: shake .35s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .match-done { text-align: center; padding: 20px 0; }
+  .match-done .big { font-size: 2rem; font-weight: 800; color: var(--success); }
+  .match-done .btn-retry { margin-top: 14px; padding: 10px 28px; border: 2px solid var(--primary); border-radius: 10px; background: none; color: var(--primary); font-weight: 600; font-size: .85rem; cursor: pointer; transition: all .15s; }
+  .match-done .btn-retry:hover { background: var(--primary-light); }
+  .match-progress { display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; }
+  .match-progress .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .match-progress .dot.done { background: var(--success); }
+  .offline-badge {
+    text-align: center; font-size: .75rem; color: var(--muted); padding: 8px 0 0;
+    opacity: .5; display: none;
+  }
+  .offline-badge.show { display: block; }
+  @media (max-width: 460px) {
+    body { padding: 12px; }
+    .pane { padding: 18px; }
+    .header { padding: 18px 18px 14px; }
+    .card-word { font-size: 1.6rem; }
+    .match-card { font-size: .82rem; padding: 12px 8px; }
+  }
+</style>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(() => {
+      // Track online/offline
+      function updateStatus() {
+        const badge = document.getElementById('offline-badge');
+        if (badge) badge.classList.toggle('show', !navigator.onLine);
+      }
+      window.addEventListener('online', updateStatus);
+      window.addEventListener('offline', updateStatus);
+      updateStatus();
+    });
+  });
+}
+</script>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="install-bar" id="install-bar">
+    <span>+ Install Lingo Lab for offline use</span>
+    <button class="close-btn" id="install-close">&times;</button>
+  </div>
+  <div class="header">
+    <h1>Lingo <span>Lab</span></h1>
+    <div class="streak">&#x1f525; <span class="streak-num" id="streak">0</span></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="flashcard">&#x1f4d6; Flashcards</button>
+    <button class="tab" data-tab="quiz">&#x270f;&#xfe0f; Quiz</button>
+    <button class="tab" data-tab="match">&#x1f9e9; Match</button>
+  </div>
+
+  <div class="pane active" id="pane-flashcard">
+    <div class="flashcard-wrap">
+      <div class="flashcard" id="flashcard">
+        <div class="card-face front">
+          <div class="card-word" id="fc-word">&mdash;</div>
+          <div class="card-phonetic" id="fc-phonetic">&mdash;</div>
+          <div class="card-hint">Tap to reveal &#x2192;</div>
+        </div>
+        <div class="card-face back">
+          <div class="card-def" id="fc-def">&mdash;</div>
+          <div class="card-example" id="fc-example"></div>
+        </div>
+      </div>
+    </div>
+    <div class="flashcard-nav">
+      <button id="fc-prev">&#x2190; Prev</button>
+      <span class="counter" id="fc-counter">0 / 0</span>
+      <button id="fc-next" class="btn-know">Next &#x2192;</button>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-quiz">
+    <div class="quiz-progress" id="quiz-progress"></div>
+    <div id="quiz-body">
+      <div class="quiz-question" id="q-text">&mdash;</div>
+      <div class="quiz-context" id="q-context"></div>
+      <div class="quiz-options" id="q-options"></div>
+      <div class="quiz-feedback" id="q-feedback"></div>
+      <button class="quiz-next" id="q-next">Next &#x2192;</button>
+    </div>
+    <div class="quiz-score" id="q-score" style="display:none"></div>
+  </div>
+
+  <div class="pane" id="pane-match">
+    <div class="match-progress" id="match-progress"></div>
+    <div class="match-grid" id="match-grid"></div>
+    <div class="match-done" id="match-done" style="display:none"></div>
+  </div>
+
+  <div class="offline-badge" id="offline-badge">&#x26a0;&#xfe0f; Offline mode &mdash; data saved locally</div>
+</div>
+
+<script>
+const WORDS = [
+  { word: "curious", phonetic: "/\u02c8kj\u028ari\u0259s/", def: "Eager to learn or know something.", example: "The curious child asked a hundred questions." },
+  { word: "resilient", phonetic: "/r\u026a\u02c8z\u026ali\u0259nt/", def: "Able to recover quickly from difficulties.", example: "She is remarkably resilient despite the setbacks." },
+  { word: "ambiguous", phonetic: "/\u00e6m\u02c8b\u026a\u0261ju\u0259s/", def: "Open to more than one interpretation.", example: "His reply was deliberately ambiguous." },
+  { word: "eloquent", phonetic: "/\u02c8el\u0259kw\u0259nt/", def: "Fluent and persuasive in speaking or writing.", example: "She gave an eloquent speech at the ceremony." },
+  { word: "meticulous", phonetic: "/m\u0259\u02c8t\u026akj\u0259l\u0259s/", def: "Showing great attention to detail.", example: "He kept meticulous records of every experiment." },
+  { word: "persistent", phonetic: "/p\u0259r\u02c8s\u026ast\u0259nt/", def: "Continuing firmly despite opposition.", example: "Her persistent efforts finally paid off." },
+  { word: "profound", phonetic: "/pr\u0259\u02c8fa\u028and/", def: "Very deep or intense; having great meaning.", example: "The book left a profound impression on me." },
+  { word: "skeptical", phonetic: "/\u02c8skept\u026akl/", def: "Not easily convinced; doubtful.", example: "I am skeptical about his so-called miracle cure." },
+  { word: "vivid", phonetic: "/\u02c8v\u026av\u026ad/", def: "Producing clear, lively images in the mind.", example: "She has a vivid memory of that sunny afternoon." },
+  { word: "benevolent", phonetic: "/b\u0259\u02c8nev\u0259l\u0259nt/", def: "Well-meaning and kindly.", example: "The benevolent donor funded the entire library." },
+  { word: "candid", phonetic: "/\u02c8k\u00e6nd\u026ad/", def: "Truthful and straightforward; frank.", example: "I appreciate your candid opinion on the matter." },
+  { word: "diligent", phonetic: "/\u02c8d\u026al\u026ad\u0292\u0259nt/", def: "Hardworking and careful.", example: "A diligent student always completes assignments on time." },
+  { word: "ephemeral", phonetic: "/\u026a\u02c8fem\u0259r\u0259l/", def: "Lasting for a very short time.", example: "The beauty of cherry blossoms is ephemeral." },
+  { word: "gratitude", phonetic: "/\u02c8\u0261r\u00e6t\u026atu\u02d0d/", def: "The quality of being thankful.", example: "He expressed his gratitude with a warm letter." },
+  { word: "nostalgia", phonetic: "/n\u0259\u02c8st\u00e6ld\u0292\u0259/", def: "A sentimental longing for the past.", example: "The old song filled him with nostalgia." },
+  { word: "optimistic", phonetic: "/\u02cc\u0251pt\u0259\u02c8m\u026ast\u026ak/", def: "Hopeful and confident about the future.", example: "She remains optimistic despite the challenges." },
+  { word: "subtle", phonetic: "/\u02c8s\u028ctl/", def: "So delicate as to be difficult to notice.", example: "There is a subtle difference in meaning." },
+  { word: "versatile", phonetic: "/\u02c8v\u025c\u02d0rs\u0259tl/", def: "Able to adapt to many functions.", example: "She is a versatile musician who plays five instruments." },
+  { word: "abundant", phonetic: "/\u0259\u02c8b\u028cnd\u0259nt/", def: "Existing in large quantities.", example: "The region has abundant natural resources." },
+  { word: "compassion", phonetic: "/k\u0259m\u02c8p\u00e6\u0283\u0259n/", def: "Sympathetic concern for others suffering.", example: "She showed great compassion toward the homeless." },
+  { word: "determined", phonetic: "/d\u026a\u02c8t\u025c\u02d0rm\u026and/", def: "Having a firm decision; resolute.", example: "He was determined to finish the marathon." },
+  { word: "fascinating", phonetic: "/\u02c8f\u00e6s\u026ane\u026at\u026a\u014b/", def: "Extremely interesting or captivating.", example: "The documentary about space was absolutely fascinating." },
+  { word: "generous", phonetic: "/\u02c8d\u0292en\u0259r\u0259s/", def: "Willing to give more than expected.", example: "The community was generous with their donations." },
+  { word: "harmony", phonetic: "/\u02c8h\u0251\u02d0rm\u0259ni/", def: "A pleasant arrangement of parts.", example: "The choir sang in perfect harmony." },
+  { word: "innovative", phonetic: "/\u02c8\u026an\u0259ve\u026at\u026av/", def: "Introducing new ideas or methods.", example: "The company is known for its innovative products." },
+  { word: "jubilant", phonetic: "/\u02c8d\u0292u\u02d0b\u026al\u0259nt/", def: "Feeling or expressing great happiness.", example: "The crowd was jubilant after the victory." },
+  { word: "keen", phonetic: "/ki\u02d0n/", def: "Eager or enthusiastic; sharp.", example: "She has a keen eye for detail." },
+  { word: "luminous", phonetic: "/\u02c8lu\u02d0m\u026an\u0259s/", def: "Full of light; bright or shining.", example: "The luminous moon lit up the path ahead." },
+  { word: "melancholy", phonetic: "/\u02c8mel\u0259nk\u0251\u02d0li/", def: "A deep, persistent sadness.", example: "There is a melancholy beauty in autumn leaves." },
+  { word: "nurture", phonetic: "/\u02c8n\u025c\u02d0rt\u0283\u0259r/", def: "To care for and encourage growth.", example: "Parents nurture their children curiosity." },
+  { word: "obstacle", phonetic: "/\u02c8\u0251\u02d0bst\u0259kl/", def: "A thing that blocks ones way.", example: "Lack of funding was the biggest obstacle." },
+  { word: "peculiar", phonetic: "/p\u026a\u02c8kju\u02d0li\u0259r/", def: "Strange or unusual; distinctive.", example: "There was a peculiar smell in the attic." },
+  { word: "quench", phonetic: "/kwent\u0283/", def: "To satisfy a thirst or desire.", example: "Nothing quenches thirst like cold water." },
+  { word: "reluctant", phonetic: "/r\u026a\u02c8l\u028ckt\u0259nt/", def: "Unwilling and hesitant.", example: "He was reluctant to leave his hometown." },
+  { word: "serene", phonetic: "/s\u0259\u02c8ri\u02d0n/", def: "Calm, peaceful, and untroubled.", example: "The lake was serene in the early morning." },
+  { word: "tenacious", phonetic: "/t\u0259\u02c8ne\u026a\u0283\u0259s/", def: "Holding firmly; persistent.", example: "A tenacious climber never gives up on the peak." },
+  { word: "unanimous", phonetic: "/ju\u02d0\u02c8n\u00e6n\u026am\u0259s/", def: "Fully in agreement.", example: "The jury reached a unanimous decision." },
+  { word: "vibrant", phonetic: "/\u02c8va\u026abr\u0259nt/", def: "Full of energy and life.", example: "The market was vibrant with colors and sounds." },
+  { word: "whimsical", phonetic: "/\u02c8w\u026amz\u026akl/", def: "Playfully quaint or fanciful.", example: "The garden had a whimsical fairy-tale charm." },
+];
+
+function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+const saved = JSON.parse(localStorage.getItem('lingolab_streak') || '0');
+let streak = saved;
+document.getElementById('streak').textContent = streak;
+function addStreak() { streak++; document.getElementById('streak').textContent = streak; localStorage.setItem('lingolab_streak', JSON.stringify(streak)); }
+
+// PWA install prompt
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const bar = document.getElementById('install-bar');
+  bar.classList.add('show');
+  bar.addEventListener('click', (ev) => {
+    if (ev.target.classList.contains('close-btn')) {
+      bar.classList.remove('show'); return;
+    }
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; bar.classList.remove('show'); });
+  });
+});
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('pane-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// Flashcard
+let fcIndex = 0;
+let fcList = shuffle([...WORDS]);
+const fcEl = document.getElementById('flashcard');
+const fcWord = document.getElementById('fc-word');
+const fcPhonetic = document.getElementById('fc-phonetic');
+const fcDef = document.getElementById('fc-def');
+const fcExample = document.getElementById('fc-example');
+const fcCounter = document.getElementById('fc-counter');
+function renderFlashcard(i) {
+  fcEl.classList.remove('flipped'); const w = fcList[i];
+  fcWord.textContent = w.word; fcPhonetic.textContent = w.phonetic;
+  fcDef.textContent = w.def; fcExample.textContent = w.example ? '\u201c' + w.example + '\u201d' : '';
+  fcCounter.textContent = (i + 1) + ' / ' + fcList.length;
+}
+fcEl.addEventListener('click', () => { fcEl.classList.toggle('flipped'); });
+document.getElementById('fc-prev').addEventListener('click', () => { fcIndex = (fcIndex - 1 + fcList.length) % fcList.length; renderFlashcard(fcIndex); });
+document.getElementById('fc-next').addEventListener('click', () => { fcIndex = (fcIndex + 1) % fcList.length; renderFlashcard(fcIndex); addStreak(); });
+renderFlashcard(0);
+
+// Quiz
+let quizQuestions = [], quizIndex = 0, quizScore = 0, quizAnswered = false;
+function buildQuiz() {
+  const shuffled = shuffle([...WORDS]); const pool = shuffled.slice(0, 10);
+  quizQuestions = pool.map(w => {
+    const wrong = shuffle(WORDS.filter(x => x.word !== w.word)).slice(0, 3).map(x => x.def);
+    const choices = shuffle([w.def, ...wrong]);
+    return { word: w.word, correct: w.def, choices };
+  });
+}
+function renderQuiz() {
+  quizAnswered = false; const q = quizQuestions[quizIndex];
+  document.getElementById('q-text').textContent = 'Which definition matches "' + q.word + '"?';
+  document.getElementById('q-context').textContent = q.word;
+  document.getElementById('quiz-progress').innerHTML = quizQuestions.map((_, i) => { let c = 'dot'; if (i < quizIndex) c += ' done'; else if (i === quizIndex) c += ' current'; return '<span class="' + c + '"></span>'; }).join('');
+  const oc = document.getElementById('q-options'); oc.innerHTML = '';
+  q.choices.forEach((def, idx) => { const b = document.createElement('button'); b.textContent = def; b.addEventListener('click', () => handleQuizAnswer(idx, b)); oc.appendChild(b); });
+  document.getElementById('q-feedback').className = 'quiz-feedback'; document.getElementById('q-feedback').style.display = 'none';
+  document.getElementById('q-next').className = 'quiz-next'; document.getElementById('q-feedback').textContent = '';
+  document.getElementById('q-score').style.display = 'none'; document.getElementById('quiz-body').style.display = 'block';
+}
+function handleQuizAnswer(idx, btn) {
+  if (quizAnswered) return; quizAnswered = true;
+  const q = quizQuestions[quizIndex]; const buttons = document.querySelectorAll('#q-options button');
+  buttons.forEach(b => b.classList.add('disabled'));
+  const isCorrect = q.choices[idx] === q.correct;
+  if (isCorrect) { quizScore++; addStreak(); }
+  buttons.forEach(b => { if (b.textContent === q.correct) b.classList.add('correct'); });
+  if (!isCorrect) btn.classList.add('wrong');
+  const fb = document.getElementById('q-feedback');
+  if (isCorrect) { fb.textContent = '\u2713 Correct! Well done.'; fb.className = 'quiz-feedback show correct'; }
+  else { fb.textContent = '\u2717 The correct answer is: ' + q.correct; fb.className = 'quiz-feedback show wrong'; }
+  const n = document.getElementById('q-next'); n.className = 'quiz-next show';
+  n.textContent = quizIndex < quizQuestions.length - 1 ? 'Next \u2192' : 'See Score';
+  const dots = document.querySelectorAll('#quiz-progress .dot');
+  if (dots[quizIndex]) { dots[quizIndex].classList.remove('current'); dots[quizIndex].classList.add(isCorrect ? 'correct' : 'wrong'); }
+}
+document.getElementById('q-next').addEventListener('click', () => { quizIndex++; if (quizIndex >= quizQuestions.length) showQuizScore(); else renderQuiz(); });
+function showQuizScore() {
+  document.getElementById('quiz-body').style.display = 'none'; const sc = document.getElementById('q-score'); sc.style.display = 'block';
+  const msg = quizScore === quizQuestions.length ? 'Perfect score! \ud83c\udf89' : quizScore >= 7 ? 'Great job! \ud83d\udc4d' : quizScore >= 4 ? 'Keep practicing! \ud83d\udcaa' : 'Try again! \ud83d\udcd6';
+  sc.innerHTML = '<div class="big">' + quizScore + ' / ' + quizQuestions.length + '</div><div class="sub">' + msg + '</div><button class="btn-retry" id="quiz-retry">\ud83d\udd04 Try Again</button>';
+  document.getElementById('quiz-retry').addEventListener('click', startQuiz);
+}
+function startQuiz() { buildQuiz(); quizIndex = 0; quizScore = 0; renderQuiz(); }
+startQuiz();
+
+// Match
+let matchPairs = [], matchSelected = null, matchMatched = 0, matchLocked = false;
+function startMatch() {
+  const pool = shuffle([...WORDS]).slice(0, 6);
+  matchPairs = pool.map(w => ({ id: crypto.randomUUID(), word: w.word, def: w.def }));
+  matchSelected = null; matchMatched = 0; matchLocked = false;
+  document.getElementById('match-done').style.display = 'none';
+  document.getElementById('match-progress').innerHTML = matchPairs.map(() => '<span class="dot"></span>').join('');
+  const left = shuffle(matchPairs.map(p => ({ ...p, side: 'word' })));
+  const right = shuffle(matchPairs.map(p => ({ ...p, side: 'def' })));
+  const all = shuffle([...left, ...right]);
+  const grid = document.getElementById('match-grid'); grid.innerHTML = '';
+  all.forEach(item => {
+    const el = document.createElement('div'); el.className = 'match-card';
+    el.textContent = item.side === 'word' ? item.word : item.def;
+    el.dataset.pairId = item.id; el.dataset.side = item.side;
+    el.addEventListener('click', () => handleMatchClick(el)); grid.appendChild(el);
+  });
+}
+function handleMatchClick(el) {
+  if (matchLocked || el.classList.contains('matched')) return;
+  if (!matchSelected) {
+    document.querySelectorAll('.match-card.selected').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected'); matchSelected = el; return;
+  }
+  const first = matchSelected; const second = el;
+  if (first === second) return;
+  if (first.dataset.side === second.dataset.side) { first.classList.remove('selected'); matchSelected = null; return; }
+  matchLocked = true; second.classList.add('selected');
+  const isMatch = first.dataset.pairId === second.dataset.pairId;
+  if (isMatch) {
+    setTimeout(() => {
+      first.classList.remove('selected'); second.classList.remove('selected');
+      first.classList.add('matched'); second.classList.add('matched'); matchMatched++;
+      const d = document.querySelectorAll('#match-progress .dot'); if (d[matchMatched - 1]) d[matchMatched - 1].classList.add('done');
+      matchSelected = null; matchLocked = false;
+      if (matchMatched === matchPairs.length) showMatchDone();
+    }, 300);
+  } else {
+    first.classList.add('wrong-try'); second.classList.add('wrong-try');
+    setTimeout(() => { first.classList.remove('selected', 'wrong-try'); second.classList.remove('selected', 'wrong-try'); matchSelected = null; matchLocked = false; }, 500);
+  }
+}
+function showMatchDone() {
+  document.getElementById('match-done').style.display = 'block';
+  document.getElementById('match-done').innerHTML = '<div class="big">\u2713 All Matched!</div><button class="btn-retry" id="match-retry">\ud83d\udd04 Play Again</button>';
+  document.getElementById('match-retry').addEventListener('click', startMatch); addStreak();
+}
+startMatch();
+</script>
+</body>
+</html>
